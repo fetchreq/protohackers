@@ -3,12 +3,12 @@ region: nyc1
 
 services:
   - name: prothacker
-    dockerfile_path: Dockerfile
+    dockerfile_path: smoke_test/Dockerfile
     source_dir: .
     github:
       branch: main
       deploy_on_push: true
-      repo: rjprice04/protohacker
+      repo: rjprice04/protohackers
     http_port: 5000
     instance_count: 1
     instance_size_slug: basic-xxs
