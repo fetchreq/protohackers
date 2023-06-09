@@ -3,7 +3,7 @@ WORKDIR /app
 RUN apt update && apt install lld clang -y
 
 FROM chef as planner
-COPY . .
+COPY ./smoke_test .
 # Compute a lock-like file for our project
 RUN cargo chef prepare --recipe-path recipe.json
 
@@ -11,7 +11,7 @@ FROM chef as builder
 COPY --from=planner /app/recipe.json recipe.json
 # Build the project dependencies, not the application
 RUN cargo chef cook --release --recipe-path recipe.json
-COPY . .
+COPY ./smoke_test .
 # Build the project
 RUN cargo build --release --bin smoke_test
 

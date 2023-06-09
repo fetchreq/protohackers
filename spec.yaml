@@ -3,8 +3,8 @@ region: nyc1
 
 services:
   - name: prothacker
-    dockerfile_path: smoke_test/Dockerfile
-    source_dir: ./smoke_test
+    dockerfile_path: Dockerfile
+    source_dir: .
     github:
       branch: main
       deploy_on_push: true
