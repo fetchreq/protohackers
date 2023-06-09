@@ -1,18 +1,31 @@
-use std::{convert::Infallible, net::SocketAddr};
-use hyper::{Body, Request, Response, Server, service::{make_service_fn, service_fn}};
 use smoke_test::{telemetry::{get_subscriber, init_subscriber}, configuration::get_config};
+use tokio::{net::{TcpListener, TcpStream}, io::{AsyncWriteExt, AsyncReadExt}};
 use tracing::{event, Level};
+use std::error::Error;
+use anyhow::Result;
 
 #[tracing::instrument(
-    name = "Echo"
+    name = "handle_stream"
 )]
-async fn hello_world(req: Request<Body>) -> Result<Response<Body>, Infallible> {
-    Ok(Response::new(req.into_body()))
-}
+async fn handle(mut stream: TcpStream) -> Result<()> {
 
+    loop { 
+        let mut buf = vec![0; 1024];
+        let n = stream.read(&mut buf).await?;
+        if n == 0 {
+            break;
+        }
+
+        stream.write_all(&buf[0..n]).await?;
+    }
+
+    stream.shutdown().await?;
+
+    Ok(())
+}
  
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), Box<dyn Error>>{
 
     let subscriber = get_subscriber("echo".into(), "info".into(), std::io::stdout);
     init_subscriber(subscriber);
@@ -20,17 +33,13 @@ async fn main() {
 
     let config = get_config().expect("Failed to read configuration");
     let addr = format!("{}:{}",config.application.host, config.application.port);
-    let socket_addr: SocketAddr = addr.parse::<SocketAddr>().unwrap();
+    let listener = TcpListener::bind(&addr).await?;
+    event!(Level::INFO, "Listening on {}", &addr);
+    
+    loop {
 
-
-    let make_svc = make_service_fn(|_conn| async {
-        Ok::<_, Infallible>(service_fn(hello_world))
-    });
-
-    let server = Server::bind(&socket_addr).serve(make_svc);
-    event!(Level::INFO, "Starting server on {}", &addr);
-    if let Err(e) = server.await {
-        eprintln!("server error: {e}")
-    } 
+        let (stream, _) = listener.accept().await?;
+        handle(stream).await?;
+    }   
 }
 
